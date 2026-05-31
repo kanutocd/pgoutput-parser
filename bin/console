@@ -9,7 +9,7 @@
 #   bundle exec bin/console
 #
 require "bundler/setup"
+require "pgoutput"
 require "pry"
-
 
 Pry.start
