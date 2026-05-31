@@ -1,6 +1,14 @@
 module Pgoutput
   VERSION: String
 
+  type message =
+    Messages::Begin |
+    Messages::Relation |
+    Messages::Insert |
+    Messages::Update |
+    Messages::Delete |
+    Messages::Commit
+
   class Error < StandardError
   end
 
@@ -18,6 +26,8 @@ module Pgoutput
       attr_reader final_lsn: Integer
       attr_reader commit_timestamp: Integer
       attr_reader xid: Integer
+
+      def self.new: (Integer final_lsn, Integer commit_timestamp, Integer xid) -> Begin
     end
 
     class Column < Data
@@ -25,6 +35,8 @@ module Pgoutput
       attr_reader name: String
       attr_reader oid: Integer
       attr_reader type_modifier: Integer
+
+      def self.new: (Integer flags, String name, Integer oid, Integer type_modifier) -> Column
     end
 
     class Relation < Data
@@ -33,17 +45,33 @@ module Pgoutput
       attr_reader table: String
       attr_reader replica_identity: Integer
       attr_reader columns: Array[Column]
+
+      def self.new: (
+        Integer relation_id,
+        String schema,
+        String table,
+        Integer replica_identity,
+        Array[Column] columns
+      ) -> Relation
     end
 
     class TupleValue < Data
       attr_reader format: :null | :unchanged_toast | :text | :binary
       attr_reader raw: String?
       attr_reader oid: Integer?
+
+      def self.new: (
+        :null | :unchanged_toast | :text | :binary format,
+        String? raw,
+        Integer? oid
+      ) -> TupleValue
     end
 
     class Insert < Data
       attr_reader relation_id: Integer
       attr_reader tuple: Array[TupleValue]
+
+      def self.new: (Integer relation_id, Array[TupleValue] tuple) -> Insert
     end
 
     class Update < Data
@@ -51,12 +79,25 @@ module Pgoutput
       attr_reader old_key_tuple: Array[TupleValue]?
       attr_reader old_tuple: Array[TupleValue]?
       attr_reader new_tuple: Array[TupleValue]
+
+      def self.new: (
+        Integer relation_id,
+        Array[TupleValue]? old_key_tuple,
+        Array[TupleValue]? old_tuple,
+        Array[TupleValue] new_tuple
+      ) -> Update
     end
 
     class Delete < Data
       attr_reader relation_id: Integer
       attr_reader old_key_tuple: Array[TupleValue]?
       attr_reader old_tuple: Array[TupleValue]?
+
+      def self.new: (
+        Integer relation_id,
+        Array[TupleValue]? old_key_tuple,
+        Array[TupleValue]? old_tuple
+      ) -> Delete
     end
 
     class Commit < Data
@@ -64,18 +105,25 @@ module Pgoutput
       attr_reader commit_lsn: Integer
       attr_reader transaction_end_lsn: Integer
       attr_reader commit_timestamp: Integer
+
+      def self.new: (
+        Integer flags,
+        Integer commit_lsn,
+        Integer transaction_end_lsn,
+        Integer commit_timestamp
+      ) -> Commit
     end
   end
 
   class BinaryParser
     def initialize: (String payload) -> void
 
-    def parse: () -> Messages::Begin | Messages::Relation | Messages::Insert | Messages::Update | Messages::Delete | Messages::Commit
+    def parse: () -> message
   end
 
   class RelationTracker
     def initialize: () -> void
 
-    def decode: (String payload) -> Messages::Begin | Messages::Relation | Messages::Insert | Messages::Update | Messages::Delete | Messages::Commit
+    def process: (String payload) -> message
   end
 end

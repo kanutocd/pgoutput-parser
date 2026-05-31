@@ -106,9 +106,4 @@ module Pgoutput
       end
     end
   end
-
-  # Compatibility constant for code that still references RelationTracker.
-  #
-  # @deprecated Use Pgoutput::RelationTracker instead.
-  RelationTracker = RelationTracker
 end
