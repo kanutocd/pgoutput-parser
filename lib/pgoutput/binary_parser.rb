@@ -62,9 +62,7 @@ module Pgoutput
     def parse_insert
       relation_id = read_uint32
       tuple_tag = read_byte_chr
-      unless tuple_tag == "N"
-        raise UnsupportedMessageError, "expected insert tuple tag N, got #{tuple_tag.inspect}"
-      end
+      raise UnsupportedMessageError, "expected insert tuple tag N, got #{tuple_tag.inspect}" unless tuple_tag == "N"
 
       share(Messages::Insert.new(relation_id, parse_tuple_data))
     end
@@ -88,9 +86,7 @@ module Pgoutput
         raise UnsupportedMessageError, "expected update tuple tag K, O, or N, got #{first_tag.inspect}"
       end
 
-      unless new_tag == "N"
-        raise UnsupportedMessageError, "expected update new tuple tag N, got #{new_tag.inspect}"
-      end
+      raise UnsupportedMessageError, "expected update new tuple tag N, got #{new_tag.inspect}" unless new_tag == "N"
 
       share(Messages::Update.new(relation_id, old_key_tuple, old_tuple, parse_tuple_data))
     end

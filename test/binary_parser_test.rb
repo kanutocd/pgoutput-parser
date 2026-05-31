@@ -34,8 +34,8 @@ class BinaryParserTest < Minitest::Test
 
     assert_instance_of Pgoutput::Messages::Insert, message
     assert_equal 42, message.relation_id
-    assert_equal [:text, :text, :text], message.tuple.map(&:format)
-    assert_equal ["7", "Alice", "t"], message.tuple.map(&:raw)
+    assert_equal %i[text text text], message.tuple.map(&:format)
+    assert_equal %w[7 Alice t], message.tuple.map(&:raw)
     assert_nil message.tuple.first.oid
     assert Ractor.shareable?(message)
   end

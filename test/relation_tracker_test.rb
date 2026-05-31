@@ -96,6 +96,6 @@ class RelationTrackerTest < Minitest::Test
       [message.old_key_tuple.first.raw, message.new_tuple[1].raw]
     end.take
 
-    assert_equal ["7", "Bob"], result
+    assert_equal %w[7 Bob], result
   end
 end

@@ -17,5 +17,4 @@ Metrics/MethodLength:
 
 Metrics/AbcSize:
   Enabled: true
-  Exclude:
-    - "test/**/*"
+  Max: 17
