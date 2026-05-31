@@ -1,43 +1,471 @@
-# Pgoutput::Parser
+# pgoutput-parser
 
-TODO: Delete this and the text below, and describe your gem
+A high-performance, Ractor-safe PostgreSQL `pgoutput` logical replication protocol parser written in pure Ruby.
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/pgoutput/parser`. To experiment with that code, run `bin/console` for an interactive prompt.
+`pgoutput-parser` parses PostgreSQL logical replication `CopyData` payloads into immutable protocol message objects. It focuses on the `pgoutput` wire format: transaction boundaries, relation metadata, DML message structure, tuple payload markers, and raw tuple bytes.
+
+It intentionally does **not** convert PostgreSQL values into application-specific Ruby objects. That belongs to a higher-level decoder layer, such as a future `pgoutput-decoder` gem.
+
+---
+
+## Requirements
+
+- Ruby 3.4+
+- PostgreSQL 10+
+
+---
+
+## Features
+
+- Pure Ruby implementation
+- Ruby 3.4+
+- Ractor-safe parsed messages
+- Immutable protocol message objects
+- PostgreSQL logical replication protocol support
+- Relation metadata tracking
+- Binary-safe tuple parsing
+- RBS type signatures included
+- YARD documentation included
+- No runtime dependencies
+
+---
+
+## Why Another pgoutput Library?
+
+This gem focuses exclusively on protocol parsing.
+
+It intentionally separates:
+
+- Protocol parsing (`pgoutput-parser`)
+- Type decoding (`pgoutput-decoder`)
+- Replication transport/client management
+
+This keeps the parser small, predictable, dependency-free, and faithful to PostgreSQL's wire format.
+
+---
+
+## Supported MVP Scope
+
+Supports the core pgoutput row-change replication messages:
+
+- Begin (`B`)
+- Relation (`R`)
+- Insert (`I`)
+- Update (`U`)
+- Delete (`D`)
+- Commit (`C`)
+
+The currently supported message formats are stable across PostgreSQL 10 through PostgreSQL 18.
+
+TupleData supports all base column markers:
+
+| Tuple Value Tag | Meaning                    |
+| --------------- | -------------------------- |
+| `n`             | NULL                       |
+| `u`             | Unchanged TOAST value      |
+| `t`             | Text-formatted raw value   |
+| `b`             | Binary-formatted raw value |
+
+### Planned Support
+
+Future releases may add support for:
+
+- Message (`M`)
+- Truncate (`T`)
+- Origin (`O`)
+- Type (`Y`)
+- Stream Start (`S`)
+- Stream Stop (`E`)
+- Stream Commit (`c`)
+- Stream Abort (`A`)
+- Two-Phase Commit messages
+
+---
+
+## What This Gem Does
+
+```text
+PostgreSQL CopyData payload
+           │
+           ▼
+    pgoutput-parser
+           │
+           ▼
+Immutable protocol messages
+```
+
+The parser understands:
+
+- Message tags and binary field sizes
+- Transaction begin metadata
+- Transaction commit metadata
+- Relation metadata
+- Column flags
+- Column names
+- PostgreSQL type OIDs
+- PostgreSQL type modifiers
+- Insert tuples
+- Update old-key tuples
+- Update old full tuples
+- Update new tuples
+- Delete old-key tuples
+- Delete old full tuples
+- Tuple value markers (`n`, `u`, `t`, `b`)
+
+---
+
+## What This Gem Does Not Do
+
+The parser does not perform application-level type decoding.
+
+It does not convert:
+
+- UUID
+- JSONB
+- Timestamp
+- Numeric
+- Array
+- Range
+- PostGIS
+- Custom PostgreSQL types
+
+Example:
+
+```ruby
+value.raw
+# => "2026-05-31 12:34:56+00"
+```
+
+The raw value is preserved exactly as received.
+
+A higher-level decoder may later interpret it.
+
+---
+
+## Non-goals
+
+This project intentionally does not:
+
+- Manage replication slots
+- Open replication connections
+- Maintain WAL positions
+- Reconnect to PostgreSQL
+- Decode PostgreSQL types
+- Integrate with ActiveRecord
+- Publish events
+- Build CDC pipelines
+
+Its sole responsibility is parsing pgoutput protocol messages.
+
+---
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+Add this line to your Gemfile:
 
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+gem "pgoutput-parser"
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+Then run:
 
 ```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+bundle install
 ```
 
-## Usage
+Require the library:
 
-TODO: Write usage instructions here
+```ruby
+require "pgoutput"
+```
+
+---
+
+## Quick Start
+
+```ruby
+require "pgoutput"
+
+stream = Pgoutput::RelationTracker.new
+
+stream.process(relation_payload)
+
+insert = stream.process(insert_payload)
+
+insert.relation_id
+# => 42
+
+insert.tuple.first.raw
+# => "7"
+
+insert.tuple.first.oid
+# => 23
+```
+
+---
+
+## Binary Tuple Values
+
+When PostgreSQL publishes tuple values using binary format (`b`), the parser preserves the raw bytes exactly as received.
+
+```ruby
+value.raw
+# => "\x00\x00\x00\x07".b
+```
+
+The parser does not interpret binary values.
+
+---
+
+## Update Messages
+
+PostgreSQL `Update` messages may contain:
+
+- No old tuple
+- An old key tuple (`K`)
+- An old full tuple (`O`)
+
+They always contain a new tuple (`N`).
+
+```ruby
+update = stream.process(update_payload)
+
+update.old_key_tuple
+# => [Pgoutput::Messages::TupleValue, ...] or nil
+
+update.old_tuple
+# => [Pgoutput::Messages::TupleValue, ...] or nil
+
+update.new_tuple
+# => [Pgoutput::Messages::TupleValue, ...]
+```
+
+### Update Tuple Example
+
+```ruby
+update = stream.process(update_payload)
+
+update.old_key_tuple
+update.old_tuple
+update.new_tuple
+```
+
+---
+
+## Delete Messages
+
+PostgreSQL `Delete` messages contain either:
+
+- An old key tuple (`K`)
+- An old full tuple (`O`)
+
+```ruby
+delete = stream.process(delete_payload)
+
+delete.old_key_tuple
+# => [Pgoutput::Messages::TupleValue, ...] or nil
+
+delete.old_tuple
+# => [Pgoutput::Messages::TupleValue, ...] or nil
+```
+
+---
+
+## Relation Metadata Tracking
+
+`RelationTracker` keeps a local relation cache so tuple values can be associated with PostgreSQL column OIDs defined by preceding Relation (`R`) messages.
+
+No type conversion is performed.
+
+Only protocol metadata is attached.
+
+```ruby
+stream.process(relation_payload)
+
+message = stream.process(update_payload)
+
+message.new_tuple.map(&:oid)
+# => [23, 25, 16]
+```
+
+The relation tracker itself is stateful and maintains relation metadata encountered in the replication stream.
+
+---
+
+## Ractor Safety
+
+```ruby
+message = stream.process(update_payload)
+
+Ractor.shareable?(message)
+# => true
+```
+
+Passing parsed messages to a Ractor:
+
+```ruby
+message = stream.process(update_payload)
+
+result = Ractor.new(message) do |update|
+  update.new_tuple.map(&:raw)
+end.take
+```
+
+---
+
+## Architecture
+
+```text
+PostgreSQL
+      │
+      ▼
+CopyData payload
+      │
+      ▼
+Pgoutput::BinaryParser
+      │
+      ▼
+Parsed protocol message
+      │
+      ▼
+Pgoutput::RelationTracker
+      │
+      ▼
+Protocol message with relation metadata
+      │
+      ▼
+Ractor-safe protocol message
+```
+
+---
+
+## Public API
+
+### Pgoutput::BinaryParser
+
+Parses a single pgoutput payload without stream state.
+
+```ruby
+message = Pgoutput::BinaryParser.new(payload).parse
+```
+
+### Pgoutput::RelationTracker
+
+Parses messages in stream order and remembers relation metadata.
+
+```ruby
+stream = Pgoutput::RelationTracker.new
+
+stream.process(relation_payload)
+
+message = stream.process(insert_payload)
+```
+
+### Optional Usage
+
+`RelationTracker` is optional.
+
+If relation metadata tracking is not required, payloads can be parsed directly:
+
+```ruby
+message =
+  Pgoutput::BinaryParser
+    .new(payload)
+    .parse
+```
+
+---
+
+## RelationTracker Lifecycle
+
+A `RelationTracker` should be created per logical replication stream.
+
+```ruby
+stream = Pgoutput::RelationTracker.new
+```
+
+The tracker maintains relation metadata discovered during the stream and therefore should not be reused across unrelated replication sessions.
+
+---
+
+## Message Classes
+
+```ruby
+Pgoutput::Messages::Begin
+Pgoutput::Messages::Relation
+Pgoutput::Messages::Column
+Pgoutput::Messages::TupleValue
+Pgoutput::Messages::Insert
+Pgoutput::Messages::Update
+Pgoutput::Messages::Delete
+Pgoutput::Messages::Commit
+```
+
+---
+
+## Type Signatures
+
+RBS signatures are included:
+
+```text
+sig/pgoutput.rbs
+```
+
+Run Steep:
+
+```bash
+bundle exec steep check
+```
+
+---
+
+## Testing
+
+Run all tests:
+
+```bash
+bundle exec rake test
+```
+
+Run with coverage:
+
+```bash
+COVERAGE=true bundle exec rake test
+```
+
+---
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Generate YARD documentation:
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```bash
+bundle exec yard doc
+```
 
-## Contributing
+---
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/pgoutput-parser. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/[USERNAME]/pgoutput-parser/blob/master/CODE_OF_CONDUCT.md).
+## Ecosystem Direction
+
+This gem is the protocol layer.
+
+```text
+pgoutput-parser
+      │
+      ▼
+Protocol messages
+      │
+      ▼
+pgoutput-decoder
+      │
+      ▼
+Application objects
+```
+
+`pgoutput-parser` should remain small, dependency-free, binary-safe, and faithful to PostgreSQL's wire format.
+
+---
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
-
-## Code of Conduct
-
-Everyone interacting in the Pgoutput::Parser project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](https://github.com/[USERNAME]/pgoutput-parser/blob/master/CODE_OF_CONDUCT.md).
+MIT.
