@@ -4,8 +4,9 @@
 /coverage/
 /doc/
 /pkg/
-/spec/reports/
 /tmp/
+*.gem
 
-# rspec failure tracking
-.rspec_status
+/.ignoreme/
+/.history/
+Gemfile.lock
