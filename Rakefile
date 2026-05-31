@@ -1,14 +1,18 @@
 # frozen_string_literal: true
 
-require "rake/testtask"
+require "rubocop/rake_task"
 require "yard"
 
-Rake::TestTask.new(:test) do |task|
-  task.libs << "test"
-  task.pattern = "test/**/*_test.rb"
-  task.warning = true
+# Define the RuboCop task (creates `rake rubocop`)
+RuboCop::RakeTask.new(:rubocop) do |task|
+  task.options = ["--parallel"] # Optional: speeds up execution
 end
 
-YARD::Rake::YardocTask.new(:yard)
+# Define the YARD task (creates `rake yard`)
+YARD::Rake::YardocTask.new(:yard) do |task|
+  task.files   = ["lib/**/*.rb"] # Optional: specify files to document
+  task.options = ["--protected"] # Optional: include protected methods
+end
 
-task default: :test
+# Set the default task to run both rubocop and yard
+task default: %i[test rubocop yard]
