@@ -16,3 +16,5 @@ end
 
 # Set the default task to run both rubocop and yard
 task default: %i[test rubocop yard]
+
+task release: :default
