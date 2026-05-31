@@ -1,0 +1,81 @@
+module Pgoutput
+  VERSION: String
+
+  class Error < StandardError
+  end
+
+  class TruncatedMessageError < Error
+  end
+
+  class UnsupportedMessageError < Error
+  end
+
+  class UnknownRelationError < Error
+  end
+
+  module Messages
+    class Begin < Data
+      attr_reader final_lsn: Integer
+      attr_reader commit_timestamp: Integer
+      attr_reader xid: Integer
+    end
+
+    class Column < Data
+      attr_reader flags: Integer
+      attr_reader name: String
+      attr_reader oid: Integer
+      attr_reader type_modifier: Integer
+    end
+
+    class Relation < Data
+      attr_reader relation_id: Integer
+      attr_reader schema: String
+      attr_reader table: String
+      attr_reader replica_identity: Integer
+      attr_reader columns: Array[Column]
+    end
+
+    class TupleValue < Data
+      attr_reader format: :null | :unchanged_toast | :text | :binary
+      attr_reader raw: String?
+      attr_reader oid: Integer?
+    end
+
+    class Insert < Data
+      attr_reader relation_id: Integer
+      attr_reader tuple: Array[TupleValue]
+    end
+
+    class Update < Data
+      attr_reader relation_id: Integer
+      attr_reader old_key_tuple: Array[TupleValue]?
+      attr_reader old_tuple: Array[TupleValue]?
+      attr_reader new_tuple: Array[TupleValue]
+    end
+
+    class Delete < Data
+      attr_reader relation_id: Integer
+      attr_reader old_key_tuple: Array[TupleValue]?
+      attr_reader old_tuple: Array[TupleValue]?
+    end
+
+    class Commit < Data
+      attr_reader flags: Integer
+      attr_reader commit_lsn: Integer
+      attr_reader transaction_end_lsn: Integer
+      attr_reader commit_timestamp: Integer
+    end
+  end
+
+  class BinaryParser
+    def initialize: (String payload) -> void
+
+    def parse: () -> Messages::Begin | Messages::Relation | Messages::Insert | Messages::Update | Messages::Delete | Messages::Commit
+  end
+
+  class StreamDecoder
+    def initialize: () -> void
+
+    def decode: (String payload) -> Messages::Begin | Messages::Relation | Messages::Insert | Messages::Update | Messages::Delete | Messages::Commit
+  end
+end
