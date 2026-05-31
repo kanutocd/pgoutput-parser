@@ -1,20 +1,23 @@
 # frozen_string_literal: true
 
+require "bundler/gem_tasks"
+require "minitest/test_task"
 require "rubocop/rake_task"
 require "yard"
 
-# Define the RuboCop task (creates `rake rubocop`)
+Minitest::TestTask.create(:test) do |task|
+  task.libs << "test"
+  task.warning = true
+  task.test_globs = ["test/**/*_test.rb"]
+end
+
 RuboCop::RakeTask.new(:rubocop) do |task|
-  task.options = ["--parallel"] # Optional: speeds up execution
+  task.options = ["--parallel"]
 end
 
-# Define the YARD task (creates `rake yard`)
 YARD::Rake::YardocTask.new(:yard) do |task|
-  task.files   = ["lib/**/*.rb"] # Optional: specify files to document
-  task.options = ["--protected"] # Optional: include protected methods
+  task.files = ["lib/**/*.rb"]
+  task.options = ["--protected"]
 end
 
-# Set the default task to run both rubocop and yard
 task default: %i[test rubocop yard]
-
-task release: :default
