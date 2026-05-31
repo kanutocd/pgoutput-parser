@@ -92,10 +92,22 @@ class RelationTrackerTest < Minitest::Test
     decoder.decode(relation_msg)
     update = decoder.decode(update_msg_with_old_key)
 
-    result = Ractor.new(update) do |message|
+    ractor = Ractor.new(update) do |message|
       [message.old_key_tuple.first.raw, message.new_tuple[1].raw]
-    end.take
+    end
+
+    result = ractor_value(ractor)
 
     assert_equal %w[7 Bob], result
+  end
+
+  private
+
+  def ractor_value(ractor)
+    if ractor.respond_to?(:value)
+      ractor.value
+    else
+      ractor.take
+    end
   end
 end
