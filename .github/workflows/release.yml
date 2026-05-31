@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  release:
+    name: Release gem to RubyGems.org
+    runs-on: ubuntu-latest
+
+    environment:
+      name: release
+      url: https://rubygems.org/gems/pgoutput-parser
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Run tests
+        run: bundle exec rake
+
+      - name: Build gem
+        run: gem build pgoutput-parser.gemspec
+
+      - name: Release gem to RubyGems.org
+        uses: rubygems/release-gem@v1
