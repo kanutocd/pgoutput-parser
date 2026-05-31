@@ -3,11 +3,11 @@
 require_relative "test_helper"
 require_relative "support/builders"
 
-class StreamDecoderTest < Minitest::Test
+class RelationTrackerTest < Minitest::Test
   include Builders
 
   def test_end_to_end_begin_relation_insert_update_delete_commit
-    decoder = Pgoutput::StreamDecoder.new
+    decoder = Pgoutput::RelationTracker.new
 
     begin_message = decoder.decode(begin_msg)
     relation = decoder.decode(relation_msg)
@@ -30,7 +30,7 @@ class StreamDecoderTest < Minitest::Test
   end
 
   def test_update_with_full_old_tuple_is_annotated
-    decoder = Pgoutput::StreamDecoder.new
+    decoder = Pgoutput::RelationTracker.new
     decoder.decode(relation_msg)
 
     update = decoder.decode(update_msg_with_old_tuple)
@@ -42,7 +42,7 @@ class StreamDecoderTest < Minitest::Test
   end
 
   def test_update_new_only_is_annotated
-    decoder = Pgoutput::StreamDecoder.new
+    decoder = Pgoutput::RelationTracker.new
     decoder.decode(relation_msg)
 
     update = decoder.decode(update_msg_new_only)
@@ -53,7 +53,7 @@ class StreamDecoderTest < Minitest::Test
   end
 
   def test_delete_with_full_old_tuple_is_annotated
-    decoder = Pgoutput::StreamDecoder.new
+    decoder = Pgoutput::RelationTracker.new
     decoder.decode(relation_msg)
 
     delete = decoder.decode(delete_msg_with_old_tuple)
@@ -64,7 +64,7 @@ class StreamDecoderTest < Minitest::Test
   end
 
   def test_insert_before_relation_raises
-    decoder = Pgoutput::StreamDecoder.new
+    decoder = Pgoutput::RelationTracker.new
 
     assert_raises(Pgoutput::UnknownRelationError) do
       decoder.decode(insert_msg)
@@ -72,7 +72,7 @@ class StreamDecoderTest < Minitest::Test
   end
 
   def test_update_before_relation_raises
-    decoder = Pgoutput::StreamDecoder.new
+    decoder = Pgoutput::RelationTracker.new
 
     assert_raises(Pgoutput::UnknownRelationError) do
       decoder.decode(update_msg_new_only)
@@ -80,7 +80,7 @@ class StreamDecoderTest < Minitest::Test
   end
 
   def test_delete_before_relation_raises
-    decoder = Pgoutput::StreamDecoder.new
+    decoder = Pgoutput::RelationTracker.new
 
     assert_raises(Pgoutput::UnknownRelationError) do
       decoder.decode(delete_msg_with_key)
@@ -88,7 +88,7 @@ class StreamDecoderTest < Minitest::Test
   end
 
   def test_ractor_handoff_safety
-    decoder = Pgoutput::StreamDecoder.new
+    decoder = Pgoutput::RelationTracker.new
     decoder.decode(relation_msg)
     update = decoder.decode(update_msg_with_old_key)
 

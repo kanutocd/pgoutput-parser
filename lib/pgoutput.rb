@@ -4,7 +4,7 @@ require_relative "pgoutput/version"
 require_relative "pgoutput/errors"
 require_relative "pgoutput/messages"
 require_relative "pgoutput/binary_parser"
-require_relative "pgoutput/stream_decoder"
+require_relative "pgoutput/relation_tracker"
 
 # Top-level namespace for pgoutput-parser.
 #

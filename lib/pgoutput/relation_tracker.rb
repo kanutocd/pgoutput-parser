@@ -1,31 +1,31 @@
 # frozen_string_literal: true
 
 module Pgoutput
-  # Stateful protocol stream decoder for pgoutput message sequences.
+  # Stateful relation tracker for pgoutput message sequences.
   #
-  # The stream decoder remembers Relation (`R`) messages so DML tuple values can
-  # be annotated with PostgreSQL type OIDs. It does not convert values. It only
-  # adds protocol metadata to tuple values while keeping returned objects deeply
-  # shareable.
+  # The relation tracker remembers Relation (`R`) messages so DML tuple values can
+  # be annotated with PostgreSQL type OIDs. It does not decode or convert values.
+  # It only adds protocol metadata to tuple values while keeping returned objects
+  # deeply shareable.
   #
   # The instance contains mutable relation-cache state and should not be shared
   # across Ractors. Returned message objects are Ractor-safe.
   #
   # @api public
-  class StreamDecoder
+  class RelationTracker
     # @return [void]
     def initialize
       @relations = {}
     end
 
-    # Decode one pgoutput payload in stream order.
+    # Process one pgoutput payload in stream order.
     #
     # @param payload [String] one pgoutput logical replication message payload.
     # @return [Pgoutput::Messages::Begin, Pgoutput::Messages::Relation,
     #   Pgoutput::Messages::Insert, Pgoutput::Messages::Update,
     #   Pgoutput::Messages::Delete, Pgoutput::Messages::Commit]
     # @raise [UnknownRelationError] if DML references an unseen relation id.
-    def decode(payload)
+    def process(payload)
       message = BinaryParser.new(payload).parse
 
       case message
@@ -43,17 +43,32 @@ module Pgoutput
       end
     end
 
+    # Backwards-compatible alias for callers migrating from RelationTracker.
+    #
+    # @param payload [String] one pgoutput logical replication message payload.
+    # @return [Pgoutput::Messages::Begin, Pgoutput::Messages::Relation,
+    #   Pgoutput::Messages::Insert, Pgoutput::Messages::Update,
+    #   Pgoutput::Messages::Delete, Pgoutput::Messages::Commit]
+    def decode(payload)
+      process(payload)
+    end
+
     private
 
     def annotate_insert(message)
       relation = relation_for(message.relation_id)
+
       Ractor.make_shareable(
-        Messages::Insert.new(message.relation_id, annotate_tuple(message.tuple, relation))
+        Messages::Insert.new(
+          message.relation_id,
+          annotate_tuple(message.tuple, relation)
+        )
       )
     end
 
     def annotate_update(message)
       relation = relation_for(message.relation_id)
+
       Ractor.make_shareable(
         Messages::Update.new(
           message.relation_id,
@@ -66,6 +81,7 @@ module Pgoutput
 
     def annotate_delete(message)
       relation = relation_for(message.relation_id)
+
       Ractor.make_shareable(
         Messages::Delete.new(
           message.relation_id,
@@ -90,4 +106,9 @@ module Pgoutput
       end
     end
   end
+
+  # Compatibility constant for code that still references RelationTracker.
+  #
+  # @deprecated Use Pgoutput::RelationTracker instead.
+  RelationTracker = RelationTracker
 end

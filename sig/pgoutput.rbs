@@ -73,7 +73,7 @@ module Pgoutput
     def parse: () -> Messages::Begin | Messages::Relation | Messages::Insert | Messages::Update | Messages::Delete | Messages::Commit
   end
 
-  class StreamDecoder
+  class RelationTracker
     def initialize: () -> void
 
     def decode: (String payload) -> Messages::Begin | Messages::Relation | Messages::Insert | Messages::Update | Messages::Delete | Messages::Commit
