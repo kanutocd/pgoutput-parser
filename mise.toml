@@ -1,3 +1,3 @@
 [tools]
 # Pin the minimum required version
-ruby = "4.0"
+ruby = "4"

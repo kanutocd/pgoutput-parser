@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cached `RelationTracker` DML processing.
 * Added parser support for non-streaming Message (`M`), Origin (`O`), Type (`Y`),
   and Truncate (`T`) messages.
+* Added benchmark tuning controls for iterations, warmup, Ractor count, and
+  scenario selection.
 
 ### Changed
 

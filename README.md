@@ -443,13 +443,7 @@ COVERAGE=true bundle exec rake test
 
 ---
 
-## Development
-
-Generate YARD documentation:
-
-```bash
-bundle exec yard doc
-```
+## Benchmarking
 
 Run the parser throughput benchmark:
 
@@ -457,10 +451,47 @@ Run the parser throughput benchmark:
 ruby benchmark/parser_throughput.rb
 ```
 
-Tune benchmark size:
+The benchmark reports single-process parser throughput, relation-tracker throughput, and Ractor-parallel throughput. It is intended to show both the single-thread baseline and the Ruby 4 Ractor path this parser is designed to support.
+
+Tune the run with environment variables:
+
+| Variable | Default | Description |
+| -------- | ------- | ----------- |
+| `PGOUTPUT_BENCH_ITERATIONS` | `100000` | Iterations per selected scenario. |
+| `PGOUTPUT_BENCH_WARMUP` | `1000` | Warmup iterations before timing. |
+| `PGOUTPUT_BENCH_RACTORS` | `2` or CPU count, whichever is lower | Number of Ractor workers for Ractor scenarios. |
+| `PGOUTPUT_BENCH_SCENARIOS` | `all` | Comma-separated scenarios: `binary`, `tracker_dml`, `tracker_mixed`, `ractor_binary`, `ractor_tracker`, or `all`. |
+
+Examples:
 
 ```bash
-PGOUTPUT_BENCH_ITERATIONS=100000 PGOUTPUT_BENCH_WARMUP=1000 ruby benchmark/parser_throughput.rb
+PGOUTPUT_BENCH_ITERATIONS=10000 ruby benchmark/parser_throughput.rb
+PGOUTPUT_BENCH_SCENARIOS=binary,tracker_mixed ruby benchmark/parser_throughput.rb
+PGOUTPUT_BENCH_RACTORS=4 PGOUTPUT_BENCH_SCENARIOS=ractor_binary,ractor_tracker ruby benchmark/parser_throughput.rb
+```
+
+Sample Ruby 4 output:
+
+```text
+pgoutput-parser throughput
+iterations=100000 warmup=1000 ractors=2 scenarios=binary,tracker_dml,tracker_mixed,ractor_binary,ractor_tracker ruby=4.0.5
+BinaryParser                    1000000 messages in   8.069s       123934 msg/s
+RelationTracker cached DML       300000 messages in   6.444s        46557 msg/s
+RelationTracker mixed            700000 messages in   8.802s        79524 msg/s
+Ractor BinaryParser             2000000 messages in   9.137s       218893 msg/s
+Ractor RelationTracker          1400000 messages in   9.363s       149522 msg/s
+```
+
+Interpret the Ractor rows as aggregate throughput across workers. They are not a replacement for the single-process rows; they demonstrate the parser's shareable-message design under parallel execution.
+
+---
+
+## Development
+
+Generate YARD documentation:
+
+```bash
+bundle exec yard doc
 ```
 
 ---
