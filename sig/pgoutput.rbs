@@ -21,6 +21,9 @@ module Pgoutput
   class UnknownRelationError < Error
   end
 
+  class TupleArityError < Error
+  end
+
   module Messages
     class Begin < Data
       attr_reader final_lsn: Integer

@@ -9,7 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-* Placeholder for future development.
+* Added `Pgoutput::TupleArityError` for relation/tuple column-count mismatches.
+
+### Changed
+
+* `Pgoutput::RelationTracker` now rejects DML tuples whose value count differs from
+  the cached `Relation` column count instead of silently assigning incomplete
+  column metadata.
+* Raised the minimum supported Ruby version to Ruby 4.0 to align with the CDC
+  ecosystem's Ractor-first parser/runtime direction.
 
 ---
 
@@ -114,4 +122,3 @@ A future companion project (`pgoutput-decoder`) may provide PostgreSQL type deco
 
 [Unreleased]: https://github.com/your-github-username/pgoutput-parser/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/your-github-username/pgoutput-parser/releases/tag/v0.1.0
-

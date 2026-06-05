@@ -107,6 +107,9 @@ message = stream.process(insert_payload)
 
 This allows tuple values to be associated with PostgreSQL column OIDs.
 
+If tuple data does not match the cached relation column count, `RelationTracker`
+raises `Pgoutput::TupleArityError`.
+
 ---
 
 # Supported Messages
@@ -230,4 +233,3 @@ bundle exec steep check
 # License
 
 MIT
-

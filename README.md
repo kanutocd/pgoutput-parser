@@ -10,7 +10,7 @@ It intentionally does **not** convert PostgreSQL values into application-specifi
 
 ## Requirements
 
-- Ruby 3.4+
+- Ruby 4+
 - PostgreSQL 10+
 
 ---
@@ -18,7 +18,7 @@ It intentionally does **not** convert PostgreSQL values into application-specifi
 ## Features
 
 - Pure Ruby implementation
-- Ruby 3.4+
+- Ruby 4+
 - Ractor-safe parsed messages
 - Immutable protocol message objects
 - PostgreSQL logical replication protocol support
@@ -289,6 +289,10 @@ message.new_tuple.map(&:oid)
 ```
 
 The relation tracker itself is stateful and maintains relation metadata encountered in the replication stream.
+
+If a DML tuple's value count does not match the cached relation column count, `RelationTracker` raises
+`Pgoutput::TupleArityError`. This keeps malformed payloads or mismatched stream state from being silently
+annotated with incomplete column metadata.
 
 ---
 

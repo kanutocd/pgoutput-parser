@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.description = "A pure Ruby parser for PostgreSQL pgoutput logical replication CopyData payloads."
   spec.homepage = "https://github.com/kanutocd/pgoutput-parser"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.4"
+  spec.required_ruby_version = ">= 4.0"
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = spec.homepage

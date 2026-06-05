@@ -21,4 +21,10 @@ module Pgoutput
   #
   # @api public
   class UnknownRelationError < Error; end
+
+  # Raised when tuple data does not match the column count advertised by the
+  # cached Relation (`R`) message.
+  #
+  # @api public
+  class TupleArityError < Error; end
 end

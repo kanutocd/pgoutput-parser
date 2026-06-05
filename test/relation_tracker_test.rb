@@ -87,6 +87,34 @@ class RelationTrackerTest < Minitest::Test
     end
   end
 
+  def test_insert_with_fewer_values_than_relation_columns_raises
+    decoder = Pgoutput::RelationTracker.new
+    decoder.decode(relation_msg)
+
+    payload = "I".b + u32(42) + "N".b + u16(2) + text_value("7") + text_value("Alice")
+
+    error = assert_raises(Pgoutput::TupleArityError) do
+      decoder.decode(payload)
+    end
+
+    assert_equal "tuple has 2 values but relation 42 has 3 columns", error.message
+  end
+
+  def test_insert_with_more_values_than_relation_columns_raises
+    decoder = Pgoutput::RelationTracker.new
+    decoder.decode(relation_msg)
+
+    payload =
+      "I".b + u32(42) + "N".b + u16(4) +
+      text_value("7") + text_value("Alice") + text_value("t") + text_value("extra")
+
+    error = assert_raises(Pgoutput::TupleArityError) do
+      decoder.decode(payload)
+    end
+
+    assert_equal "tuple has 4 values but relation 42 has 3 columns", error.message
+  end
+
   def test_ractor_handoff_safety
     decoder = Pgoutput::RelationTracker.new
     decoder.decode(relation_msg)

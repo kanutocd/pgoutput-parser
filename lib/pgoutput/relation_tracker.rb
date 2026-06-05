@@ -25,6 +25,7 @@ module Pgoutput
     #   Pgoutput::Messages::Insert, Pgoutput::Messages::Update,
     #   Pgoutput::Messages::Delete, Pgoutput::Messages::Commit]
     # @raise [UnknownRelationError] if DML references an unseen relation id.
+    # @raise [TupleArityError] if DML tuple data does not match relation metadata.
     def process(payload)
       message = BinaryParser.new(payload).parse
 
@@ -94,10 +95,19 @@ module Pgoutput
     def annotate_tuple(tuple, relation)
       return nil if tuple.nil?
 
+      validate_tuple_arity!(tuple, relation)
+
       tuple.each_with_index.map do |value, index|
-        column = relation.columns[index]
-        Messages::TupleValue.new(value.format, value.raw, column&.oid)
+        Messages::TupleValue.new(value.format, value.raw, relation.columns.fetch(index).oid)
       end.freeze
+    end
+
+    def validate_tuple_arity!(tuple, relation)
+      return if tuple.length == relation.columns.length
+
+      raise TupleArityError,
+            "tuple has #{tuple.length} values but relation #{relation.relation_id} " \
+            "has #{relation.columns.length} columns"
     end
 
     def relation_for(relation_id)
