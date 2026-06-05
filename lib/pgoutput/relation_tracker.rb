@@ -73,8 +73,8 @@ module Pgoutput
       Ractor.make_shareable(
         Messages::Update.new(
           message.relation_id,
-          annotate_tuple(message.old_key_tuple, relation),
-          annotate_tuple(message.old_tuple, relation),
+          annotate_optional_tuple(message.old_key_tuple, relation),
+          annotate_optional_tuple(message.old_tuple, relation),
           annotate_tuple(message.new_tuple, relation)
         )
       )
@@ -86,15 +86,19 @@ module Pgoutput
       Ractor.make_shareable(
         Messages::Delete.new(
           message.relation_id,
-          annotate_tuple(message.old_key_tuple, relation),
-          annotate_tuple(message.old_tuple, relation)
+          annotate_optional_tuple(message.old_key_tuple, relation),
+          annotate_optional_tuple(message.old_tuple, relation)
         )
       )
     end
 
-    def annotate_tuple(tuple, relation)
+    def annotate_optional_tuple(tuple, relation)
       return nil if tuple.nil?
 
+      annotate_tuple(tuple, relation)
+    end
+
+    def annotate_tuple(tuple, relation)
       validate_tuple_arity!(tuple, relation)
 
       tuple.each_with_index.map do |value, index|

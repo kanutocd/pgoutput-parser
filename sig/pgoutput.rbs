@@ -119,14 +119,50 @@ module Pgoutput
   end
 
   class BinaryParser
+    @payload: String
+    @offset: Integer
+
     def initialize: (String payload) -> void
 
     def parse: () -> message
+
+    private
+
+    def parse_begin: () -> Messages::Begin
+    def parse_relation: () -> Messages::Relation
+    def parse_insert: () -> Messages::Insert
+    def parse_update: () -> Messages::Update
+    def parse_delete: () -> Messages::Delete
+    def parse_commit: () -> Messages::Commit
+    def parse_tuple_data: () -> Array[Messages::TupleValue]
+    def read_uint8: () -> Integer
+    def read_uint16: () -> Integer
+    def read_uint32: () -> Integer
+    def read_int32: () -> Integer
+    def read_uint64: () -> Integer
+    def read_byte_chr: () -> String
+    def read_cstring: () -> String
+    def read_bytes: (Integer length) -> String
+    def share: [T < message] (T message) -> T
   end
 
   class RelationTracker
+    @relations: Hash[Integer, Messages::Relation]
+
     def initialize: () -> void
 
     def process: (String payload) -> message
+
+    def decode: (String payload) -> message
+
+    private
+
+    def annotate_insert: (Messages::Insert message) -> Messages::Insert
+    def annotate_update: (Messages::Update message) -> Messages::Update
+    def annotate_delete: (Messages::Delete message) -> Messages::Delete
+    def annotate_optional_tuple: (Array[Messages::TupleValue]? tuple, Messages::Relation relation) -> Array[Messages::TupleValue]?
+    def annotate_tuple: (Array[Messages::TupleValue] tuple, Messages::Relation relation) -> Array[Messages::TupleValue]
+    def validate_tuple_arity!: (Array[Messages::TupleValue] tuple, Messages::Relation relation) -> void
+    def relation_for: (Integer relation_id) -> Messages::Relation
   end
 end

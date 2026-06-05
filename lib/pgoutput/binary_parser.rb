@@ -129,18 +129,18 @@ module Pgoutput
       end.freeze
     end
 
-    def read_uint8 = read_bytes(1).unpack1("C")
+    def read_uint8 = Integer(read_bytes(1).unpack1("C"))
 
-    def read_uint16 = read_bytes(2).unpack1("n")
+    def read_uint16 = Integer(read_bytes(2).unpack1("n"))
 
-    def read_uint32 = read_bytes(4).unpack1("N")
+    def read_uint32 = Integer(read_bytes(4).unpack1("N"))
 
     def read_int32
       value = read_uint32
       value >= 0x8000_0000 ? value - 0x1_0000_0000 : value
     end
 
-    def read_uint64 = read_bytes(8).unpack1("Q>")
+    def read_uint64 = Integer(read_bytes(8).unpack1("Q>"))
 
     def read_byte_chr = read_bytes(1)
 
@@ -148,7 +148,7 @@ module Pgoutput
       zero = @payload.index("\0", @offset)
       raise TruncatedMessageError, "unterminated cstring at offset #{@offset}" unless zero
 
-      value = @payload.byteslice(@offset, zero - @offset).freeze
+      value = String(@payload.byteslice(@offset, zero - @offset)).freeze
       @offset = zero + 1
       value
     end
@@ -159,7 +159,7 @@ module Pgoutput
         raise TruncatedMessageError, "need #{length} bytes at offset #{@offset}, payload has #{@payload.bytesize} bytes"
       end
 
-      value = @payload.byteslice(@offset, length)
+      value = String(@payload.byteslice(@offset, length))
       @offset += length
       value
     end
