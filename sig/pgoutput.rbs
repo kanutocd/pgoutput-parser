@@ -3,10 +3,14 @@ module Pgoutput
 
   type message =
     Messages::Begin |
+    Messages::Message |
+    Messages::Origin |
     Messages::Relation |
+    Messages::Type |
     Messages::Insert |
     Messages::Update |
     Messages::Delete |
+    Messages::Truncate |
     Messages::Commit
 
   class Error < StandardError
@@ -42,6 +46,22 @@ module Pgoutput
       def self.new: (Integer flags, String name, Integer oid, Integer type_modifier) -> Column
     end
 
+    class Message < Data
+      attr_reader flags: Integer
+      attr_reader lsn: Integer
+      attr_reader prefix: String
+      attr_reader content: String
+
+      def self.new: (Integer flags, Integer lsn, String prefix, String content) -> Message
+    end
+
+    class Origin < Data
+      attr_reader origin_lsn: Integer
+      attr_reader name: String
+
+      def self.new: (Integer origin_lsn, String name) -> Origin
+    end
+
     class Relation < Data
       attr_reader relation_id: Integer
       attr_reader schema: String
@@ -56,6 +76,14 @@ module Pgoutput
         Integer replica_identity,
         Array[Column] columns
       ) -> Relation
+    end
+
+    class Type < Data
+      attr_reader oid: Integer
+      attr_reader schema: String
+      attr_reader name: String
+
+      def self.new: (Integer oid, String schema, String name) -> Type
     end
 
     class TupleValue < Data
@@ -103,6 +131,13 @@ module Pgoutput
       ) -> Delete
     end
 
+    class Truncate < Data
+      attr_reader relation_ids: Array[Integer]
+      attr_reader options: Integer
+
+      def self.new: (Array[Integer] relation_ids, Integer options) -> Truncate
+    end
+
     class Commit < Data
       attr_reader flags: Integer
       attr_reader commit_lsn: Integer
@@ -129,10 +164,14 @@ module Pgoutput
     private
 
     def parse_begin: () -> Messages::Begin
+    def parse_message: () -> Messages::Message
+    def parse_origin: () -> Messages::Origin
     def parse_relation: () -> Messages::Relation
+    def parse_type: () -> Messages::Type
     def parse_insert: () -> Messages::Insert
     def parse_update: () -> Messages::Update
     def parse_delete: () -> Messages::Delete
+    def parse_truncate: () -> Messages::Truncate
     def parse_commit: () -> Messages::Commit
     def parse_tuple_data: () -> Array[Messages::TupleValue]
     def read_uint8: () -> Integer

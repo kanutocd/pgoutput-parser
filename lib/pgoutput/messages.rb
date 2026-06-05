@@ -20,6 +20,26 @@ module Pgoutput
     #   @return [Integer] transaction id.
     Begin = Data.define(:final_lsn, :commit_timestamp, :xid)
 
+    # Logical decoding message.
+    #
+    # @!attribute [r] flags
+    #   @return [Integer] message flags; bit 0 marks transactional messages.
+    # @!attribute [r] lsn
+    #   @return [Integer] LSN of the logical decoding message.
+    # @!attribute [r] prefix
+    #   @return [String] message prefix.
+    # @!attribute [r] content
+    #   @return [String] immutable raw message content.
+    Message = Data.define(:flags, :lsn, :prefix, :content)
+
+    # Replication origin message.
+    #
+    # @!attribute [r] origin_lsn
+    #   @return [Integer] commit LSN on the origin server.
+    # @!attribute [r] name
+    #   @return [String] origin name.
+    Origin = Data.define(:origin_lsn, :name)
+
     # Relation column metadata.
     #
     # @!attribute [r] flags
@@ -45,6 +65,16 @@ module Pgoutput
     # @!attribute [r] columns
     #   @return [Array<Column>] immutable column metadata.
     Relation = Data.define(:relation_id, :schema, :table, :replica_identity, :columns)
+
+    # PostgreSQL type metadata message.
+    #
+    # @!attribute [r] oid
+    #   @return [Integer] PostgreSQL type OID.
+    # @!attribute [r] schema
+    #   @return [String] namespace name.
+    # @!attribute [r] name
+    #   @return [String] type name.
+    Type = Data.define(:oid, :schema, :name)
 
     # One tuple column value.
     #
@@ -90,6 +120,14 @@ module Pgoutput
     # @!attribute [r] old_tuple
     #   @return [Array<TupleValue>, nil] full old tuple when replica identity is FULL.
     Delete = Data.define(:relation_id, :old_key_tuple, :old_tuple)
+
+    # Truncate DML message.
+    #
+    # @!attribute [r] relation_ids
+    #   @return [Array<Integer>] relation OIDs affected by the truncate.
+    # @!attribute [r] options
+    #   @return [Integer] option bits; 1 is CASCADE, 2 is RESTART IDENTITY.
+    Truncate = Data.define(:relation_ids, :options)
 
     # Transaction commit message.
     #

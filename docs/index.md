@@ -117,10 +117,14 @@ raises `Pgoutput::TupleArityError`.
 Current MVP support:
 
 * Begin (`B`)
+* Message (`M`)
+* Origin (`O`)
 * Relation (`R`)
+* Type (`Y`)
 * Insert (`I`)
 * Update (`U`)
 * Delete (`D`)
+* Truncate (`T`)
 * Commit (`C`)
 
 Supported across PostgreSQL 10–18.

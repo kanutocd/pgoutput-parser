@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added `Pgoutput::TupleArityError` for relation/tuple column-count mismatches.
 * Added a dependency-free parser throughput benchmark for `BinaryParser` and
   cached `RelationTracker` DML processing.
+* Added parser support for non-streaming Message (`M`), Origin (`O`), Type (`Y`),
+  and Truncate (`T`) messages.
 
 ### Changed
 

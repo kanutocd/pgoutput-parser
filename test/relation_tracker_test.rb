@@ -87,6 +87,26 @@ class RelationTrackerTest < Minitest::Test
     end
   end
 
+  def test_non_tuple_messages_pass_through
+    decoder = Pgoutput::RelationTracker.new
+
+    messages = [
+      decoder.decode(logical_message_msg),
+      decoder.decode(origin_msg),
+      decoder.decode(type_msg),
+      decoder.decode(truncate_msg)
+    ]
+
+    assert_instance_of Pgoutput::Messages::Message, messages[0]
+    assert_instance_of Pgoutput::Messages::Origin, messages[1]
+    assert_instance_of Pgoutput::Messages::Type, messages[2]
+    assert_instance_of Pgoutput::Messages::Truncate, messages[3]
+
+    messages.each do |message|
+      assert Ractor.shareable?(message)
+    end
+  end
+
   def test_insert_with_fewer_values_than_relation_columns_raises
     decoder = Pgoutput::RelationTracker.new
     decoder.decode(relation_msg)

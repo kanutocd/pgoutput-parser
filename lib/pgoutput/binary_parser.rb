@@ -9,6 +9,7 @@ module Pgoutput
   # cross Ractor boundaries safely.
   #
   # @api public
+  # rubocop:disable Metrics/ClassLength
   class BinaryParser
     # @param payload [String] one pgoutput message payload from a CopyData frame.
     # @return [void]
@@ -19,30 +20,49 @@ module Pgoutput
 
     # Parse one supported pgoutput message.
     #
-    # Supported MVP tags are `B`, `R`, `I`, `U`, `D`, and `C`.
+    # Supported MVP tags are `B`, `M`, `O`, `R`, `Y`, `I`, `U`, `D`, `T`, and `C`.
     #
     # @return [Pgoutput::Messages::Begin, Pgoutput::Messages::Relation,
     #   Pgoutput::Messages::Insert, Pgoutput::Messages::Update,
     #   Pgoutput::Messages::Delete, Pgoutput::Messages::Commit]
     # @raise [UnsupportedMessageError] if the message tag is unsupported.
     # @raise [TruncatedMessageError] if the payload is incomplete.
+    # rubocop:disable Metrics/CyclomaticComplexity
     def parse
       case read_byte_chr
       when "B" then parse_begin
+      when "M" then parse_message
+      when "O" then parse_origin
       when "R" then parse_relation
+      when "Y" then parse_type
       when "I" then parse_insert
       when "U" then parse_update
       when "D" then parse_delete
+      when "T" then parse_truncate
       when "C" then parse_commit
       else
         raise UnsupportedMessageError, "unsupported pgoutput message tag"
       end
     end
+    # rubocop:enable Metrics/CyclomaticComplexity
 
     private
 
     def parse_begin
       share(Messages::Begin.new(read_uint64, read_uint64, read_uint32))
+    end
+
+    def parse_message
+      flags = read_uint8
+      lsn = read_uint64
+      prefix = read_cstring
+      content = read_bytes(read_int32).freeze
+
+      share(Messages::Message.new(flags, lsn, prefix, content))
+    end
+
+    def parse_origin
+      share(Messages::Origin.new(read_uint64, read_cstring))
     end
 
     def parse_relation
@@ -57,6 +77,10 @@ module Pgoutput
       end.freeze
 
       share(Messages::Relation.new(relation_id, schema, table, replica_identity, columns))
+    end
+
+    def parse_type
+      share(Messages::Type.new(read_uint32, read_cstring, read_cstring))
     end
 
     def parse_insert
@@ -103,6 +127,14 @@ module Pgoutput
       else
         raise UnsupportedMessageError, "expected delete tuple tag K or O, got #{tuple_tag.inspect}"
       end
+    end
+
+    def parse_truncate
+      relation_count = read_uint32
+      options = read_uint8
+      relation_ids = Array.new(relation_count) { read_uint32 }.freeze
+
+      share(Messages::Truncate.new(relation_ids, options))
     end
 
     def parse_commit
@@ -168,4 +200,5 @@ module Pgoutput
       Ractor.make_shareable(message)
     end
   end
+  # rubocop:enable Metrics/ClassLength
 end

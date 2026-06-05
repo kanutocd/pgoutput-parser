@@ -14,6 +14,15 @@ module Builders
     "B".b + u64(lsn) + u64(timestamp) + u32(xid)
   end
 
+  def logical_message_msg(flags: 1, lsn: 999, prefix: "audit", content: "changed")
+    content = content.b
+    "M".b + u8(flags) + u64(lsn) + cstr(prefix) + i32(content.bytesize) + content
+  end
+
+  def origin_msg(lsn: 777, name: "upstream")
+    "O".b + u64(lsn) + cstr(name)
+  end
+
   def relation_msg
     "R".b +
       u32(42) +
@@ -24,6 +33,10 @@ module Builders
       u8(1) + cstr("id") + u32(23) + i32(-1) +
       u8(0) + cstr("name") + u32(25) + i32(-1) +
       u8(0) + cstr("active") + u32(16) + i32(-1)
+  end
+
+  def type_msg
+    "Y".b + u32(2950) + cstr("public") + cstr("uuid")
   end
 
   def tuple_values(id:, name:, active: "t")
@@ -73,6 +86,10 @@ module Builders
 
   def delete_msg_with_old_tuple
     "D".b + u32(42) + "O".b + tuple_values(id: 7, name: "Alice")
+  end
+
+  def truncate_msg
+    "T".b + u32(2) + u8(3) + u32(42) + u32(43)
   end
 
   def commit_msg

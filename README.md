@@ -46,13 +46,17 @@ This keeps the parser small, predictable, dependency-free, and faithful to Postg
 
 ## Supported MVP Scope
 
-Supports the core pgoutput row-change replication messages:
+Supports the core non-streaming pgoutput logical replication messages:
 
 - Begin (`B`)
+- Message (`M`)
+- Origin (`O`)
 - Relation (`R`)
+- Type (`Y`)
 - Insert (`I`)
 - Update (`U`)
 - Delete (`D`)
+- Truncate (`T`)
 - Commit (`C`)
 
 The currently supported message formats are stable across PostgreSQL 10 through PostgreSQL 18.
@@ -70,10 +74,6 @@ TupleData supports all base column markers:
 
 Future releases may add support for:
 
-- Message (`M`)
-- Truncate (`T`)
-- Origin (`O`)
-- Type (`Y`)
 - Stream Start (`S`)
 - Stream Stop (`E`)
 - Stream Commit (`c`)
@@ -396,12 +396,16 @@ The tracker maintains relation metadata discovered during the stream and therefo
 
 ```ruby
 Pgoutput::Messages::Begin
+Pgoutput::Messages::Message
+Pgoutput::Messages::Origin
 Pgoutput::Messages::Relation
+Pgoutput::Messages::Type
 Pgoutput::Messages::Column
 Pgoutput::Messages::TupleValue
 Pgoutput::Messages::Insert
 Pgoutput::Messages::Update
 Pgoutput::Messages::Delete
+Pgoutput::Messages::Truncate
 Pgoutput::Messages::Commit
 ```
 
@@ -445,6 +449,18 @@ Generate YARD documentation:
 
 ```bash
 bundle exec yard doc
+```
+
+Run the parser throughput benchmark:
+
+```bash
+ruby benchmark/parser_throughput.rb
+```
+
+Tune benchmark size:
+
+```bash
+PGOUTPUT_BENCH_ITERATIONS=100000 PGOUTPUT_BENCH_WARMUP=1000 ruby benchmark/parser_throughput.rb
 ```
 
 ---

@@ -3,6 +3,7 @@
 require_relative "test_helper"
 require_relative "support/builders"
 
+# rubocop:disable Metrics/ClassLength
 class BinaryParserTest < Minitest::Test
   include Builders
 
@@ -16,6 +17,26 @@ class BinaryParserTest < Minitest::Test
     assert Ractor.shareable?(message)
   end
 
+  def test_parses_logical_message
+    message = Pgoutput::BinaryParser.new(logical_message_msg).parse
+
+    assert_instance_of Pgoutput::Messages::Message, message
+    assert_equal 1, message.flags
+    assert_equal 999, message.lsn
+    assert_equal "audit", message.prefix
+    assert_equal "changed", message.content
+    assert Ractor.shareable?(message)
+  end
+
+  def test_parses_origin
+    message = Pgoutput::BinaryParser.new(origin_msg).parse
+
+    assert_instance_of Pgoutput::Messages::Origin, message
+    assert_equal 777, message.origin_lsn
+    assert_equal "upstream", message.name
+    assert Ractor.shareable?(message)
+  end
+
   def test_parses_relation
     message = Pgoutput::BinaryParser.new(relation_msg).parse
 
@@ -26,6 +47,16 @@ class BinaryParserTest < Minitest::Test
     assert_equal 100, message.replica_identity
     assert_equal %w[id name active], message.columns.map(&:name)
     assert_equal [23, 25, 16], message.columns.map(&:oid)
+    assert Ractor.shareable?(message)
+  end
+
+  def test_parses_type
+    message = Pgoutput::BinaryParser.new(type_msg).parse
+
+    assert_instance_of Pgoutput::Messages::Type, message
+    assert_equal 2950, message.oid
+    assert_equal "public", message.schema
+    assert_equal "uuid", message.name
     assert Ractor.shareable?(message)
   end
 
@@ -90,6 +121,15 @@ class BinaryParserTest < Minitest::Test
     assert_equal "Alice", message.old_tuple[1].raw
   end
 
+  def test_parses_truncate
+    message = Pgoutput::BinaryParser.new(truncate_msg).parse
+
+    assert_instance_of Pgoutput::Messages::Truncate, message
+    assert_equal [42, 43], message.relation_ids
+    assert_equal 3, message.options
+    assert Ractor.shareable?(message)
+  end
+
   def test_parses_commit
     message = Pgoutput::BinaryParser.new(commit_msg).parse
 
@@ -129,3 +169,4 @@ class BinaryParserTest < Minitest::Test
     end
   end
 end
+# rubocop:enable Metrics/ClassLength

@@ -20,4 +20,9 @@ YARD::Rake::YardocTask.new(:yard) do |task|
   task.options = ["--protected", "--markup", "markdown", "--readme", "docs/index.md"]
 end
 
+desc "Run parser throughput benchmark"
+task :benchmark do
+  ruby "benchmark/parser_throughput.rb"
+end
+
 task default: %i[test rubocop yard]
