@@ -80,6 +80,7 @@ SCENARIOS = %w[
   ractor_binary
   ractor_tracker
 ].freeze
+CACHE_KINDS = %w[hash ratomic].freeze
 
 def env_int(name, default, minimum:)
   value = Integer(ENV.fetch(name, default.to_s))
@@ -88,20 +89,27 @@ def env_int(name, default, minimum:)
   value
 end
 
-def selected_scenarios
-  requested = ENV.fetch("PGOUTPUT_BENCH_SCENARIOS", "all").split(",").map(&:strip)
-  return SCENARIOS if requested.include?("all")
+def env_list(name, default, allowed:)
+  requested = ENV.fetch(name, default).split(",").map(&:strip)
+  return allowed if requested.include?("all")
 
-  unknown = requested - SCENARIOS
-  raise ArgumentError, "unknown benchmark scenarios: #{unknown.join(", ")}" unless unknown.empty?
+  unknown = requested - allowed
+  raise ArgumentError, "unknown #{name} values: #{unknown.join(", ")}" unless unknown.empty?
 
   requested
+end
+
+def selected_scenarios
+  env_list("PGOUTPUT_BENCH_SCENARIOS", "all", allowed: SCENARIOS)
 end
 
 ITERATIONS = env_int("PGOUTPUT_BENCH_ITERATIONS", 100_000, minimum: 1)
 WARMUP = env_int("PGOUTPUT_BENCH_WARMUP", 1_000, minimum: 0)
 RACTORS = env_int("PGOUTPUT_BENCH_RACTORS", [Etc.nprocessors, 2].min, minimum: 1)
 SELECTED_SCENARIOS = selected_scenarios.freeze
+RELATION_CACHE_KINDS = env_list("PGOUTPUT_BENCH_RELATION_CACHE", "hash", allowed: CACHE_KINDS).freeze
+
+require "ratomic" if RELATION_CACHE_KINDS.include?("ratomic")
 
 def report(label, total, elapsed)
   rate = total / elapsed
@@ -131,6 +139,15 @@ def parse_payloads(payloads, iterations)
   checksum
 end
 
+def relation_cache(kind)
+  case kind
+  when "hash" then {}
+  when "ratomic" then Ratomic::Map.new
+  else
+    raise ArgumentError, "unknown relation cache kind: #{kind}"
+  end
+end
+
 def ractor_parse_payloads(payloads, iterations, worker_count)
   workers = Array.new(worker_count) do
     Ractor.new(payloads, iterations) do |worker_payloads, worker_iterations|
@@ -149,9 +166,9 @@ def ractor_parse_payloads(payloads, iterations, worker_count)
   workers.sum { |worker| ractor_value(worker) }
 end
 
-def track_payloads(relation_payload, dml_payloads, iterations)
+def track_payloads(relation_payload, dml_payloads, iterations, cache_kind)
   checksum = 0
-  tracker = Pgoutput::RelationTracker.new
+  tracker = Pgoutput::RelationTracker.new(relation_cache: relation_cache(cache_kind))
   tracker.process(relation_payload)
 
   iterations.times do
@@ -163,11 +180,14 @@ def track_payloads(relation_payload, dml_payloads, iterations)
   checksum
 end
 
-def ractor_track_payloads(relation_payload, payloads, iterations, worker_count)
+def ractor_track_payloads(relation_payload, payloads, iterations, worker_count, cache_kind) # rubocop:disable Metrics/AbcSize
   workers = Array.new(worker_count) do
-    Ractor.new(relation_payload, payloads, iterations) do |worker_relation, worker_payloads, worker_iterations|
+    Ractor.new(relation_payload, payloads, iterations, cache_kind) do |worker_relation,
+                                                                        worker_payloads,
+                                                                        worker_iterations,
+                                                                        worker_cache_kind|
       checksum = 0
-      tracker = Pgoutput::RelationTracker.new
+      tracker = Pgoutput::RelationTracker.new(relation_cache: relation_cache(worker_cache_kind))
       tracker.process(worker_relation)
 
       worker_iterations.times do
@@ -225,16 +245,26 @@ shared_tracker_payloads = Ractor.make_shareable(tracker_payloads)
 shared_relation_payload = Ractor.make_shareable(relation_payload)
 
 parse_payloads(binary_payloads, WARMUP) if run_scenario?("binary")
-track_payloads(relation_payload, dml_payloads, WARMUP) if run_scenario?("tracker_dml")
-track_payloads(relation_payload, tracker_payloads, WARMUP) if run_scenario?("tracker_mixed")
+if run_scenario?("tracker_dml")
+  RELATION_CACHE_KINDS.each do |cache_kind|
+    track_payloads(relation_payload, dml_payloads, WARMUP, cache_kind)
+  end
+end
+if run_scenario?("tracker_mixed")
+  RELATION_CACHE_KINDS.each do |cache_kind|
+    track_payloads(relation_payload, tracker_payloads, WARMUP, cache_kind)
+  end
+end
 ractor_parse_payloads(shared_binary_payloads, WARMUP, RACTORS) if run_scenario?("ractor_binary")
 if run_scenario?("ractor_tracker")
-  ractor_track_payloads(shared_relation_payload, shared_tracker_payloads, WARMUP, RACTORS)
+  RELATION_CACHE_KINDS.each do |cache_kind|
+    ractor_track_payloads(shared_relation_payload, shared_tracker_payloads, WARMUP, RACTORS, cache_kind)
+  end
 end
 
 puts "pgoutput-parser throughput"
 puts "iterations=#{ITERATIONS} warmup=#{WARMUP} ractors=#{RACTORS} " \
-     "scenarios=#{SELECTED_SCENARIOS.join(",")} ruby=#{RUBY_VERSION}"
+     "scenarios=#{SELECTED_SCENARIOS.join(",")} relation_cache=#{RELATION_CACHE_KINDS.join(",")} ruby=#{RUBY_VERSION}"
 
 if run_scenario?("binary")
   binary_elapsed = Benchmark.realtime { parse_payloads(binary_payloads, ITERATIONS) }
@@ -242,13 +272,19 @@ if run_scenario?("binary")
 end
 
 if run_scenario?("tracker_dml")
-  tracker_elapsed = Benchmark.realtime { track_payloads(relation_payload, dml_payloads, ITERATIONS) }
-  report("RelationTracker cached DML", dml_payloads.length * ITERATIONS, tracker_elapsed)
+  RELATION_CACHE_KINDS.each do |cache_kind|
+    tracker_elapsed = Benchmark.realtime { track_payloads(relation_payload, dml_payloads, ITERATIONS, cache_kind) }
+    report("RelationTracker DML #{cache_kind}", dml_payloads.length * ITERATIONS, tracker_elapsed)
+  end
 end
 
 if run_scenario?("tracker_mixed")
-  tracker_all_elapsed = Benchmark.realtime { track_payloads(relation_payload, tracker_payloads, ITERATIONS) }
-  report("RelationTracker mixed", tracker_payloads.length * ITERATIONS, tracker_all_elapsed)
+  RELATION_CACHE_KINDS.each do |cache_kind|
+    tracker_all_elapsed = Benchmark.realtime do
+      track_payloads(relation_payload, tracker_payloads, ITERATIONS, cache_kind)
+    end
+    report("RelationTracker #{cache_kind}", tracker_payloads.length * ITERATIONS, tracker_all_elapsed)
+  end
 end
 
 if run_scenario?("ractor_binary")
@@ -257,8 +293,11 @@ if run_scenario?("ractor_binary")
 end
 
 if run_scenario?("ractor_tracker")
-  ractor_tracker_elapsed = Benchmark.realtime do
-    ractor_track_payloads(shared_relation_payload, shared_tracker_payloads, ITERATIONS, RACTORS)
+  RELATION_CACHE_KINDS.each do |cache_kind|
+    ractor_tracker_elapsed = Benchmark.realtime do
+      ractor_track_payloads(shared_relation_payload, shared_tracker_payloads, ITERATIONS, RACTORS, cache_kind)
+    end
+    total = tracker_payloads.length * ITERATIONS * RACTORS
+    report("Ractor RelationTracker #{cache_kind}", total, ractor_tracker_elapsed)
   end
-  report("Ractor RelationTracker", tracker_payloads.length * ITERATIONS * RACTORS, ractor_tracker_elapsed)
 end

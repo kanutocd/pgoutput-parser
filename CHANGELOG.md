@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and Truncate (`T`) messages.
 * Added benchmark tuning controls for iterations, warmup, Ractor count, and
   scenario selection.
+* Added benchmark relation-cache tuning for comparing the default Hash cache
+  with optional `Ratomic::Map`.
 
 ### Changed
 

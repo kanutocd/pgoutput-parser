@@ -4,7 +4,7 @@ module Pgoutput
   # Immutable message model classes for the PostgreSQL pgoutput protocol.
   #
   # Every value returned by the parser is deeply shareable via
-  # {Ractor.make_shareable}. These classes are protocol-level structures only;
+  # `Ractor.make_shareable`. These classes are protocol-level structures only;
   # they preserve tuple bytes and metadata but do not convert PostgreSQL values
   # into application-specific Ruby types.
   #

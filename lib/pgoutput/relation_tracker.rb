@@ -8,14 +8,19 @@ module Pgoutput
   # It only adds protocol metadata to tuple values while keeping returned objects
   # deeply shareable.
   #
-  # The instance contains mutable relation-cache state and should not be shared
-  # across Ractors. Returned message objects are Ractor-safe.
+  # The relation cache is injectable so callers can keep the default Hash-backed
+  # local cache or supply a Ractor-safe cache such as `Ratomic::Map`.
+  #
+  # Returned message objects are Ractor-safe.
   #
   # @api public
   class RelationTracker
+    # Create a tracker with an optional relation cache.
+    #
+    # @param relation_cache [Hash, #fetch, #[]=] cache for relation metadata
     # @return [void]
-    def initialize
-      @relations = {}
+    def initialize(relation_cache: {})
+      @relations = relation_cache
     end
 
     # Process one pgoutput payload in stream order.

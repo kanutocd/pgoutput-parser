@@ -275,6 +275,10 @@ delete.old_tuple
 
 `RelationTracker` keeps a local relation cache so tuple values can be associated with PostgreSQL column OIDs defined by preceding Relation (`R`) messages.
 
+The tracker accepts an optional `relation_cache:` argument. The default is a
+plain Hash, but callers can inject `Ratomic::Map` for a Ractor-safe cache in
+experimental or parallel setups.
+
 No type conversion is performed.
 
 Only protocol metadata is attached.
@@ -451,7 +455,7 @@ Run the parser throughput benchmark:
 ruby benchmark/parser_throughput.rb
 ```
 
-The benchmark reports single-process parser throughput, relation-tracker throughput, and Ractor-parallel throughput. It is intended to show both the single-thread baseline and the Ruby 4 Ractor path this parser is designed to support.
+The benchmark reports single-process parser throughput, relation-tracker throughput, and Ractor-parallel throughput. It is intended to show both the single-thread baseline and the Ruby 4 Ractor path this parser is designed to support. Relation-tracker scenarios can also compare the default Hash relation cache with an optional `Ratomic::Map` cache.
 
 Tune the run with environment variables:
 
@@ -461,6 +465,7 @@ Tune the run with environment variables:
 | `PGOUTPUT_BENCH_WARMUP` | `1000` | Warmup iterations before timing. |
 | `PGOUTPUT_BENCH_RACTORS` | `2` or CPU count, whichever is lower | Number of Ractor workers for Ractor scenarios. |
 | `PGOUTPUT_BENCH_SCENARIOS` | `all` | Comma-separated scenarios: `binary`, `tracker_dml`, `tracker_mixed`, `ractor_binary`, `ractor_tracker`, or `all`. |
+| `PGOUTPUT_BENCH_RELATION_CACHE` | `hash` | Comma-separated relation-cache backends for tracker scenarios: `hash`, `ratomic`, or `all`. |
 
 Examples:
 
@@ -468,18 +473,18 @@ Examples:
 PGOUTPUT_BENCH_ITERATIONS=10000 ruby benchmark/parser_throughput.rb
 PGOUTPUT_BENCH_SCENARIOS=binary,tracker_mixed ruby benchmark/parser_throughput.rb
 PGOUTPUT_BENCH_RACTORS=4 PGOUTPUT_BENCH_SCENARIOS=ractor_binary,ractor_tracker ruby benchmark/parser_throughput.rb
+PGOUTPUT_BENCH_RELATION_CACHE=all PGOUTPUT_BENCH_SCENARIOS=tracker_mixed,ractor_tracker ruby benchmark/parser_throughput.rb
 ```
 
 Sample Ruby 4 output:
 
 ```text
 pgoutput-parser throughput
-iterations=100000 warmup=1000 ractors=2 scenarios=binary,tracker_dml,tracker_mixed,ractor_binary,ractor_tracker ruby=4.0.5
-BinaryParser                    1000000 messages in   8.069s       123934 msg/s
-RelationTracker cached DML       300000 messages in   6.444s        46557 msg/s
-RelationTracker mixed            700000 messages in   8.802s        79524 msg/s
-Ractor BinaryParser             2000000 messages in   9.137s       218893 msg/s
-Ractor RelationTracker          1400000 messages in   9.363s       149522 msg/s
+iterations=1000 warmup=10 ractors=2 scenarios=tracker_mixed,ractor_tracker relation_cache=hash,ratomic ruby=4.0.5
+RelationTracker hash               7000 messages in   0.163s        42891 msg/s
+RelationTracker ratomic            7000 messages in   0.131s        53579 msg/s
+Ractor RelationTracker hash       14000 messages in   0.197s        71097 msg/s
+Ractor RelationTracker ratomic      14000 messages in   0.146s        96190 msg/s
 ```
 
 Interpret the Ractor rows as aggregate throughput across workers. They are not a replacement for the single-process rows; they demonstrate the parser's shareable-message design under parallel execution.

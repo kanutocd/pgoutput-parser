@@ -28,6 +28,7 @@ module Pgoutput
   class TupleArityError < Error
   end
 
+  # Immutable message model classes for the PostgreSQL pgoutput protocol.
   module Messages
     class Begin < Data
       attr_reader final_lsn: Integer
@@ -69,13 +70,7 @@ module Pgoutput
       attr_reader replica_identity: Integer
       attr_reader columns: Array[Column]
 
-      def self.new: (
-        Integer relation_id,
-        String schema,
-        String table,
-        Integer replica_identity,
-        Array[Column] columns
-      ) -> Relation
+      def self.new: (Integer relation_id, String schema, String table, Integer replica_identity, Array[Column] columns) -> Relation
     end
 
     class Type < Data
@@ -91,11 +86,7 @@ module Pgoutput
       attr_reader raw: String?
       attr_reader oid: Integer?
 
-      def self.new: (
-        :null | :unchanged_toast | :text | :binary format,
-        String? raw,
-        Integer? oid
-      ) -> TupleValue
+      def self.new: (:null | :unchanged_toast | :text | :binary format, String? raw, Integer? oid) -> TupleValue
     end
 
     class Insert < Data
@@ -111,12 +102,7 @@ module Pgoutput
       attr_reader old_tuple: Array[TupleValue]?
       attr_reader new_tuple: Array[TupleValue]
 
-      def self.new: (
-        Integer relation_id,
-        Array[TupleValue]? old_key_tuple,
-        Array[TupleValue]? old_tuple,
-        Array[TupleValue] new_tuple
-      ) -> Update
+      def self.new: (Integer relation_id, Array[TupleValue]? old_key_tuple, Array[TupleValue]? old_tuple, Array[TupleValue] new_tuple) -> Update
     end
 
     class Delete < Data
@@ -124,11 +110,7 @@ module Pgoutput
       attr_reader old_key_tuple: Array[TupleValue]?
       attr_reader old_tuple: Array[TupleValue]?
 
-      def self.new: (
-        Integer relation_id,
-        Array[TupleValue]? old_key_tuple,
-        Array[TupleValue]? old_tuple
-      ) -> Delete
+      def self.new: (Integer relation_id, Array[TupleValue]? old_key_tuple, Array[TupleValue]? old_tuple) -> Delete
     end
 
     class Truncate < Data
@@ -144,12 +126,7 @@ module Pgoutput
       attr_reader transaction_end_lsn: Integer
       attr_reader commit_timestamp: Integer
 
-      def self.new: (
-        Integer flags,
-        Integer commit_lsn,
-        Integer transaction_end_lsn,
-        Integer commit_timestamp
-      ) -> Commit
+      def self.new: (Integer flags, Integer commit_lsn, Integer transaction_end_lsn, Integer commit_timestamp) -> Commit
     end
   end
 
@@ -188,7 +165,7 @@ module Pgoutput
   class RelationTracker
     @relations: Hash[Integer, Messages::Relation]
 
-    def initialize: () -> void
+    def initialize: (?relation_cache: untyped) -> void
 
     def process: (String payload) -> message
 
