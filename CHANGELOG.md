@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.2.0] - 2026-06-06
+
 ### Added
 
 * Added `Pgoutput::TupleArityError` for relation/tuple column-count mismatches.
@@ -18,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scenario selection.
 * Added benchmark relation-cache tuning for comparing the default Hash cache
   with optional `Ratomic::Map`.
+* Added generated documentation pages for the glossary and detailed
+  `RelationTracker` usage.
+* Added optional `Ratomic::Map` relation-cache coverage and benchmark smoke
+  paths.
+* Added grouped unit, integration, and behavior test layout aligned with the CDC
+  component test shape.
+* Added explicit BinaryParser coverage for unterminated C strings and negative
+  byte lengths.
 
 ### Changed
 
@@ -26,6 +38,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   column metadata.
 * Raised the minimum supported Ruby version to Ruby 4.0 to align with the CDC
   ecosystem's Ractor-first parser/runtime direction.
+* `Pgoutput::RelationTracker` now accepts an injectable `relation_cache:` object
+  compatible with Hash-style `#[]=` and `#fetch`.
+* GitHub Actions now validates RBS signatures and runs a small benchmark smoke
+  test against Hash and Ratomic relation-cache paths.
 
 ---
 
@@ -128,5 +144,6 @@ A future companion project (`pgoutput-decoder`) may provide PostgreSQL type deco
 
 ---
 
-[Unreleased]: https://github.com/your-github-username/pgoutput-parser/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/your-github-username/pgoutput-parser/releases/tag/v0.1.0
+[Unreleased]: https://github.com/kanutocd/pgoutput-parser/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/kanutocd/pgoutput-parser/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/kanutocd/pgoutput-parser/releases/tag/v0.1.0
