@@ -30,3 +30,13 @@ jobs:
           bundler-cache: true
       - name: Run the default task
         run: bundle exec rake
+      - name: Validate RBS signatures
+        run: bundle exec rake rbs:validate
+      - name: Run benchmark smoke test
+        run: |
+          PGOUTPUT_BENCH_ITERATIONS=10 \
+          PGOUTPUT_BENCH_WARMUP=1 \
+          PGOUTPUT_BENCH_RACTORS=2 \
+          PGOUTPUT_BENCH_SCENARIOS=tracker_mixed,ractor_tracker \
+          PGOUTPUT_BENCH_RELATION_CACHE=all \
+          bundle exec ruby benchmark/parser_throughput.rb
