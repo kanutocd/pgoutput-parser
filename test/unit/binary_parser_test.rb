@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require_relative "test_helper"
-require_relative "support/builders"
+require_relative "../test_helper"
+require_relative "../support/builders"
 
 # rubocop:disable Metrics/ClassLength
 class BinaryParserTest < Minitest::Test
@@ -151,6 +151,26 @@ class BinaryParserTest < Minitest::Test
     assert_raises(Pgoutput::TruncatedMessageError) do
       Pgoutput::BinaryParser.new("B\x00".b).parse
     end
+  end
+
+  def test_rejects_unterminated_cstring
+    payload = "R".b + u32(42) + "public".b
+
+    error = assert_raises(Pgoutput::TruncatedMessageError) do
+      Pgoutput::BinaryParser.new(payload).parse
+    end
+
+    assert_match(/unterminated cstring/, error.message)
+  end
+
+  def test_rejects_negative_byte_length
+    payload = "M".b + u8(1) + u64(999) + cstr("audit") + i32(-1)
+
+    error = assert_raises(Pgoutput::TruncatedMessageError) do
+      Pgoutput::BinaryParser.new(payload).parse
+    end
+
+    assert_match(/negative byte length -1/, error.message)
   end
 
   def test_rejects_invalid_update_shape

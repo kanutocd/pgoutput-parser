@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "benchmark"
+require "bundler/setup"
 require "etc"
 
 require_relative "../lib/pgoutput"

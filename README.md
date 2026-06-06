@@ -28,6 +28,9 @@ It intentionally does **not** convert PostgreSQL values into application-specifi
 - YARD documentation included
 - No runtime dependencies
 
+The generated documentation also includes a project glossary:
+[docs/glossary.md](docs/glossary.md).
+
 ---
 
 ## Why Another pgoutput Library?
@@ -278,6 +281,9 @@ delete.old_tuple
 The tracker accepts an optional `relation_cache:` argument. The default is a
 plain Hash, but callers can inject `Ratomic::Map` for a Ractor-safe cache in
 experimental or parallel setups.
+
+For a deeper guide, including stream-order behavior, tuple arity validation, and
+`Ratomic::Map` usage, see [docs/relation_tracker.md](docs/relation_tracker.md).
 
 No type conversion is performed.
 

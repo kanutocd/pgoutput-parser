@@ -8,11 +8,11 @@ module Pgoutput
   # single payload. Its returned message object is deeply frozen/shareable and may
   # cross Ractor boundaries safely.
   #
-  # @api public
+  # @api public Public parser for decoding one pgoutput protocol message payload.
   # rubocop:disable Metrics/ClassLength
   class BinaryParser
     # @param payload [String] one pgoutput message payload from a CopyData frame.
-    # @return [void]
+    # @return [void] initializes parser state for the supplied payload.
     def initialize(payload)
       @payload = payload.b
       @offset = 0
@@ -22,9 +22,12 @@ module Pgoutput
     #
     # Supported MVP tags are `B`, `M`, `O`, `R`, `Y`, `I`, `U`, `D`, `T`, and `C`.
     #
-    # @return [Pgoutput::Messages::Begin, Pgoutput::Messages::Relation,
+    # @return [Pgoutput::Messages::Begin, Pgoutput::Messages::Message,
+    #   Pgoutput::Messages::Origin, Pgoutput::Messages::Relation,
+    #   Pgoutput::Messages::Type, Pgoutput::Messages::Truncate,
     #   Pgoutput::Messages::Insert, Pgoutput::Messages::Update,
-    #   Pgoutput::Messages::Delete, Pgoutput::Messages::Commit]
+    #   Pgoutput::Messages::Delete, Pgoutput::Messages::Commit] parsed immutable
+    #   message object for the payload tag.
     # @raise [UnsupportedMessageError] if the message tag is unsupported.
     # @raise [TruncatedMessageError] if the payload is incomplete.
     # rubocop:disable Metrics/CyclomaticComplexity

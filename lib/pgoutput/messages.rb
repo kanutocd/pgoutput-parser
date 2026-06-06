@@ -8,7 +8,7 @@ module Pgoutput
   # they preserve tuple bytes and metadata but do not convert PostgreSQL values
   # into application-specific Ruby types.
   #
-  # @api public
+  # @api public Public immutable message model namespace returned by parsers.
   module Messages
     # Transaction begin message.
     #

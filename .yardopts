@@ -1,0 +1,7 @@
+--title "pgoutput-parser API Documentation"
+--readme README.md
+--markup markdown
+--output-dir doc
+lib/**/*.rb
+-
+docs/**/*.md
